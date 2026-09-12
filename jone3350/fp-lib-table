@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "onboarding_project_footprint_lib") (type "KiCad") (uri "${KIPRJMOD}/onboarding_project_footprint_lib.pretty") (options "") (descr ""))
+)
