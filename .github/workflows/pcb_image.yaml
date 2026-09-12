@@ -145,7 +145,7 @@ jobs:
           BASE_URL="https://github.com/${{ github.repository }}/blob/pr-${{ github.event.pull_request.number }}-assets"
           CACHE_BUSTER="?raw=true&v=${{ github.run_id }}"
           
-          echo "## 📊 PCB Validation Reports & Renders" > pr-message.md
+          echo "## PCB Validation Reports & Renders" > pr-message.md
           
           for proj_dir in outputs/*/; do
             [ -d "$proj_dir" ] || continue
@@ -153,8 +153,8 @@ jobs:
             # The folder name is now used for everything (e.g. 'arepikov' or 'foo')
             folder=$(basename "$proj_dir")
             
-            echo "### 🚀 Folder: $folder" >> pr-message.md
-            echo "#### 📸 Renders" >> pr-message.md
+            echo "### Folder: $folder" >> pr-message.md
+            echo "### Renders" >> pr-message.md
             
             echo "![Top Layer]($BASE_URL/$folder/top.png$CACHE_BUSTER)" >> pr-message.md
             echo "![Bottom Layer]($BASE_URL/$folder/bottom.png$CACHE_BUSTER)" >> pr-message.md
