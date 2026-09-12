@@ -161,12 +161,13 @@ jobs:
             echo "![Top Layer]($BASE_URL/$folder/top.png$CACHE_BUSTER)" >> pr-message.md
             echo "![Bottom Layer]($BASE_URL/$folder/bottom.png$CACHE_BUSTER)" >> pr-message.md
             
-            # Dynamically find the schematic SVG since its name might differ from the folder name
-            SCH_SVG=$(find "outputs/$folder" -maxdepth 1 -name "*.svg" ! -name "pcb.svg" -print -quit)
-            if [ -n "$SCH_SVG" ]; then
-                sch_file=$(basename "$SCH_SVG")
-                echo "![Schematic]($BASE_URL/$folder/${sch_file}$CACHE_BUSTER)" >> pr-message.md
-            fi
+            # Loop through ALL generated SVG files and display them
+            for svg_path in "outputs/$folder"/*.svg; do
+              if [ -f "$svg_path" ]; then
+                svg_file=$(basename "$svg_path")
+                echo "![$svg_file]($BASE_URL/$folder/${svg_file}$CACHE_BUSTER)" >> pr-message.md
+              fi
+            done
             
             echo "" >> pr-message.md
             echo "---" >> pr-message.md
