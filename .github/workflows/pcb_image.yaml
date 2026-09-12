@@ -23,7 +23,6 @@ jobs:
       - name: Find KiCad Projects
         id: set-matrix
         run: |
-          # Finds all .kicad_pcb files in the repo and outputs them as a JSON array
           PROJECTS=$(find . -type f -name "*.kicad_pcb" | jq -R -s -c 'split("\n")[:-1]')
           echo "matrix=$PROJECTS" >> $GITHUB_OUTPUT
 
@@ -52,8 +51,22 @@ jobs:
         run: |
           DIRNAME=$(dirname "${{ matrix.pcb_path }}")
           BASENAME=$(basename "${{ matrix.pcb_path }}" .kicad_pcb)
+          
+          # Strip the leading './' that 'find' generates (e.g. './foo' becomes 'foo')
+          FOLDER=${DIRNAME#./}
+          
+          # Fallback: if the file is in the root directory, just use the project name
+          if [ "$FOLDER" = "." ] \vert{}\vert{} [ "$FOLDER" = "" ]; then
+            FOLDER="$BASENAME"
+          fi
+          
+          # Replace slashes with dashes for a safe GitHub artifact name
+          SAFE_ARTIFACT_NAME=$(echo "${FOLDER}-${BASENAME}" | tr '/' '-')
+          
           echo "dir=$DIRNAME" >> $GITHUB_OUTPUT
+          echo "folder=$FOLDER" >> $GITHUB_OUTPUT
           echo "name=$BASENAME" >> $GITHUB_OUTPUT
+          echo "artifact=$SAFE_ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
       - name: KiCad library setup
         run: |
@@ -63,38 +76,38 @@ jobs:
 
       - name: Create output directory
         run: |
-          # Everything for this project goes into outputs/{foldername}
-          mkdir -p "outputs/${{ steps.vars.outputs.name }}"
+          mkdir -p "outputs/${{ steps.vars.outputs.folder }}"
 
       - name: Run ERC & Export Schematic
         run: |
           SCH_FILE="${{ steps.vars.outputs.dir }}/${{ steps.vars.outputs.name }}.kicad_sch"
           if [ -f "$SCH_FILE" ]; then
-            kicad-cli sch erc --output "outputs/${{ steps.vars.outputs.name }}/erc.rpt" "$SCH_FILE"
-            kicad-cli sch export svg --output "outputs/${{ steps.vars.outputs.name }}/" "$SCH_FILE"
+            kicad-cli sch erc --output "outputs/${{ steps.vars.outputs.folder }}/erc.rpt" "$SCH_FILE"
+            kicad-cli sch export svg --output "outputs/${{ steps.vars.outputs.folder }}/" "$SCH_FILE"
           fi
 
       - name: Run DRC (Errors Only)
         run: |
-          kicad-cli pcb drc --output "outputs/${{ steps.vars.outputs.name }}/drc.rpt" --severity-error "${{ matrix.pcb_path }}"
+          kicad-cli pcb drc --output "outputs/${{ steps.vars.outputs.folder }}/drc.rpt" --severity-error "${{ matrix.pcb_path }}"
 
       - name: Export PCB Image
         run: |
-          kicad-cli pcb export svg --layers F.Cu,B.Cu --output "outputs/${{ steps.vars.outputs.name }}/pcb.svg" --check-zones --mode-single --fit-page-to-board "${{ matrix.pcb_path }}"
+          kicad-cli pcb export svg --layers F.Cu,B.Cu --output "outputs/${{ steps.vars.outputs.folder }}/pcb.svg" --check-zones --mode-single --fit-page-to-board "${{ matrix.pcb_path }}"
 
       - name: Render PCB Image
         uses: linalinn/kicad-render@main
         with:
           pcb_file: ${{ matrix.pcb_path }}
-          output_path: ${{ github.workspace }}/outputs/${{ steps.vars.outputs.name }}
+          output_path: ${{ github.workspace }}/outputs/${{ steps.vars.outputs.folder }}
           background: transparent
 
       - name: Upload Project Artifact
         uses: actions/upload-artifact@v4
         with:
-          # Name the artifact exactly as the project name
-          name: ${{ steps.vars.outputs.name }}
-          path: outputs/${{ steps.vars.outputs.name }}
+          # Unique name so parallel jobs don't crash into each other
+          name: pcb-${{ steps.vars.outputs.artifact }}
+          # We upload the outputs folder, which contains your 'foo/' directory inside it
+          path: outputs/
           retention-days: 1
 
   # ==========================================
@@ -113,10 +126,10 @@ jobs:
       - name: Download all project artifacts
         uses: actions/download-artifact@v4
         with:
-          # This automatically downloads every uploaded artifact into its own folder 
-          # named after the artifact (which we set to the project name above).
-          # Result: outputs/project1/..., outputs/project2/...
           path: outputs
+          # merge-multiple is the magic bullet here: it takes all the parallel artifact 
+          # uploads and seamlessly merges them into the exact outputs/foo structure you want.
+          merge-multiple: true
 
       - name: Publish Renders to Asset Branch
         uses: s0/git-publish-subdir-action@develop
@@ -134,37 +147,39 @@ jobs:
           
           echo "## 📊 PCB Validation Reports & Renders" > pr-message.md
           
-          # Loop through each dynamically created folder in the outputs directory
           for proj_dir in outputs/*/; do
             [ -d "$proj_dir" ] || continue
-            proj=$(basename "$proj_dir")
             
-            echo "### 🚀 Project: $proj" >> pr-message.md
+            # The folder name is now used for everything (e.g. 'arepikov' or 'foo')
+            folder=$(basename "$proj_dir")
+            
+            echo "### 🚀 Folder: $folder" >> pr-message.md
             echo "#### 📸 Renders" >> pr-message.md
             
-            # Note: The images are now directly in the project folder
-            echo "![Top Layer]($BASE_URL/$proj/top.png$CACHE_BUSTER)" >> pr-message.md
-            echo "![Bottom Layer]($BASE_URL/$proj/bottom.png$CACHE_BUSTER)" >> pr-message.md
+            echo "![Top Layer]($BASE_URL/$folder/top.png$CACHE_BUSTER)" >> pr-message.md
+            echo "![Bottom Layer]($BASE_URL/$folder/bottom.png$CACHE_BUSTER)" >> pr-message.md
             
-            if [ -f "outputs/$proj/${proj}.svg" ]; then
-                echo "![Schematic]($BASE_URL/$proj/${proj}.svg$CACHE_BUSTER)" >> pr-message.md
+            # Dynamically find the schematic SVG since its name might differ from the folder name
+            SCH_SVG=$(find "outputs/$folder" -maxdepth 1 -name "*.svg" ! -name "pcb.svg" -print -quit)
+            if [ -n "$SCH_SVG" ]; then
+                sch_file=$(basename "$SCH_SVG")
+                echo "![Schematic]($BASE_URL/$folder/${sch_file}$CACHE_BUSTER)" >> pr-message.md
             fi
             
             echo "---" >> pr-message.md
             
-            # Read reports directly from the single folder
-            echo "<details><summary><b>Click to expand $proj DRC Report</b></summary>" >> pr-message.md
+            echo "<details><summary><b>Click to expand $folder DRC Report</b></summary>" >> pr-message.md
             echo "" >> pr-message.md
             echo '```text' >> pr-message.md
-            cat "outputs/$proj/drc.rpt" >> pr-message.md
+            cat "outputs/$folder/drc.rpt" >> pr-message.md
             echo '```' >> pr-message.md
             echo "</details>" >> pr-message.md
             
-            if [ -f "outputs/$proj/erc.rpt" ]; then
-              echo "<details><summary><b>Click to expand $proj ERC Report</b></summary>" >> pr-message.md
+            if [ -f "outputs/$folder/erc.rpt" ]; then
+              echo "<details><summary><b>Click to expand $folder ERC Report</b></summary>" >> pr-message.md
               echo "" >> pr-message.md
               echo '```text' >> pr-message.md
-              cat "outputs/$proj/erc.rpt" >> pr-message.md
+              cat "outputs/$folder/erc.rpt" >> pr-message.md
               echo '```' >> pr-message.md
               echo "</details>" >> pr-message.md
             fi
