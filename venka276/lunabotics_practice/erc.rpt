@@ -1,0 +1,15 @@
+ERC report (2026-09-12T18:05:18, Encoding UTF8)
+Report includes: Errors, Warnings
+
+***** Sheet /
+[lib_symbol_issues]: The current configuration does not include the symbol library 'symbol_library'
+    ; warning
+    @(95.25 mm, 127.00 mm): Symbol U2 [mcp6546-e_p]
+
+ ** ERC messages: 1  Errors 0  Warnings 1
+
+ ** Ignored checks:
+    - Global label only appears once in the schematic
+    - Four connection points are joined together
+    - SPICE model issue
+    - Assigned footprint doesn't match footprint filters
