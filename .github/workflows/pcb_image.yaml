@@ -166,7 +166,9 @@ jobs:
                 echo "![Schematic]($BASE_URL/$folder/${sch_file}$CACHE_BUSTER)" >> pr-message.md
             fi
             
+            echo "" >> pr-message.md
             echo "---" >> pr-message.md
+            echo "" >> pr-message.md
             
             echo "<details><summary><b>Click to expand $folder DRC Report</b></summary>" >> pr-message.md
             echo "" >> pr-message.md
