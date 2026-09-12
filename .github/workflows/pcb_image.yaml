@@ -1,0 +1,201 @@
+name: pcb_image
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  # ==========================================
+  # 1. DYNAMICALLY FIND ALL PROJECTS
+  # ==========================================
+  discover-projects:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Find KiCad Projects
+        id: set-matrix
+        run: |
+          PROJECTS=$(find . -type f -name "*.kicad_pcb" | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix=$PROJECTS" >> $GITHUB_OUTPUT
+
+  # ==========================================
+  # 2. RUN CHECKS & RENDERS FOR EACH
+  # ==========================================
+  render-projects:
+    needs: discover-projects
+    runs-on: ubuntu-latest
+    container:
+      image: kicad/kicad:10.0
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        pcb_path: ${{ fromJson(needs.discover-projects.outputs.matrix) }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Project Variables
+        id: vars
+        run: |
+          DIRNAME=$(dirname "${{ matrix.pcb_path }}")
+          BASENAME=$(basename "${{ matrix.pcb_path }}" .kicad_pcb)
+          
+          # Strip the leading './' that 'find' generates (e.g. './foo' becomes 'foo')
+          FOLDER=${DIRNAME#./}
+          
+          # Fallback: if the file is in the root directory, just use the project name
+          if [ "$FOLDER" = "." ] \vert{}\vert{} [ "$FOLDER" = "" ]; then
+            FOLDER="$BASENAME"
+          fi
+          
+          # Replace slashes with dashes for a safe GitHub artifact name
+          SAFE_ARTIFACT_NAME=$(echo "${FOLDER}-${BASENAME}" | tr '/' '-')
+          
+          echo "dir=$DIRNAME" >> $GITHUB_OUTPUT
+          echo "folder=$FOLDER" >> $GITHUB_OUTPUT
+          echo "name=$BASENAME" >> $GITHUB_OUTPUT
+          echo "artifact=$SAFE_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+
+      - name: KiCad library setup
+        run: |
+          mkdir -p ~/.config/kicad/10.0
+          cp /usr/share/kicad/template/sym-lib-table ~/.config/kicad/10.0/sym-lib-table
+          cp /usr/share/kicad/template/fp-lib-table ~/.config/kicad/10.0/fp-lib-table
+
+      - name: Create output directory
+        run: |
+          mkdir -p "outputs/${{ steps.vars.outputs.folder }}"
+
+      - name: Run ERC & Export Schematic
+        run: |
+          SCH_FILE="${{ steps.vars.outputs.dir }}/${{ steps.vars.outputs.name }}.kicad_sch"
+          if [ -f "$SCH_FILE" ]; then
+            kicad-cli sch erc --output "outputs/${{ steps.vars.outputs.folder }}/erc.rpt" "$SCH_FILE"
+            kicad-cli sch export svg --output "outputs/${{ steps.vars.outputs.folder }}/" "$SCH_FILE"
+          fi
+
+      - name: Run DRC (Errors Only)
+        run: |
+          kicad-cli pcb drc --output "outputs/${{ steps.vars.outputs.folder }}/drc.rpt" --severity-error "${{ matrix.pcb_path }}"
+
+      - name: Export PCB Image
+        run: |
+          kicad-cli pcb export svg --layers F.Cu,B.Cu --output "outputs/${{ steps.vars.outputs.folder }}/pcb.svg" --check-zones --mode-single --fit-page-to-board "${{ matrix.pcb_path }}"
+
+      - name: Render PCB Image
+        uses: linalinn/kicad-render@main
+        with:
+          pcb_file: ${{ matrix.pcb_path }}
+          output_path: ${{ github.workspace }}/outputs/${{ steps.vars.outputs.folder }}
+          background: transparent
+
+      - name: Upload Project Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Unique name so parallel jobs don't crash into each other
+          name: pcb-${{ steps.vars.outputs.artifact }}
+          # We upload the outputs folder, which contains your 'foo/' directory inside it
+          path: outputs/
+          retention-days: 1
+
+  # ==========================================
+  # 3. AGGREGATE, PUSH TO BRANCH, AND COMMENT
+  # ==========================================
+  publish-and-comment:
+    needs: [discover-projects, render-projects]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Download all project artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: outputs
+          # merge-multiple is the magic bullet here: it takes all the parallel artifact 
+          # uploads and seamlessly merges them into the exact outputs/foo structure you want.
+          merge-multiple: true
+
+      - name: Publish Renders to Asset Branch
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          BRANCH: pr-${{ github.event.pull_request.number }}-assets
+          FOLDER: outputs 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: "Auto-generated PCB renders and reports"
+
+      - name: Combine Reports and Images into Markdown
+        run: |
+          BASE_URL="https://github.com/${{ github.repository }}/blob/pr-${{ github.event.pull_request.number }}-assets"
+          CACHE_BUSTER="?raw=true&v=${{ github.run_id }}"
+          
+          echo "## PCB Validation Reports & Renders" > pr-message.md
+          echo "" >> pr-message.md
+          
+          for proj_dir in outputs/*/; do
+            [ -d "$proj_dir" ] || continue
+            
+            # The folder name is now used for everything (e.g. 'arepikov' or 'foo')
+            folder=$(basename "$proj_dir")
+            
+            echo "### Folder: $folder" >> pr-message.md
+            echo "### Renders" >> pr-message.md
+            echo "" >> pr-message.md
+            
+            echo "![Top Layer]($BASE_URL/$folder/top.png$CACHE_BUSTER)" >> pr-message.md
+            echo "![Bottom Layer]($BASE_URL/$folder/bottom.png$CACHE_BUSTER)" >> pr-message.md
+            
+            # Dynamically find the schematic SVG since its name might differ from the folder name
+            SCH_SVG=$(find "outputs/$folder" -maxdepth 1 -name "*.svg" ! -name "pcb.svg" -print -quit)
+            if [ -n "$SCH_SVG" ]; then
+                sch_file=$(basename "$SCH_SVG")
+                echo "![Schematic]($BASE_URL/$folder/${sch_file}$CACHE_BUSTER)" >> pr-message.md
+            fi
+            
+            echo "" >> pr-message.md
+            echo "---" >> pr-message.md
+            echo "" >> pr-message.md
+            
+            echo "<details><summary><b>Click to expand $folder DRC Report</b></summary>" >> pr-message.md
+            echo "" >> pr-message.md
+            echo '```text' >> pr-message.md
+            cat "outputs/$folder/drc.rpt" >> pr-message.md
+            echo '```' >> pr-message.md
+            echo "</details>" >> pr-message.md
+            echo "" >> pr-message.md
+            
+            if [ -f "outputs/$folder/erc.rpt" ]; then
+              echo "<details><summary><b>Click to expand $folder ERC Report</b></summary>" >> pr-message.md
+              echo "" >> pr-message.md
+              echo '```text' >> pr-message.md
+              cat "outputs/$folder/erc.rpt" >> pr-message.md
+              echo '```' >> pr-message.md
+              echo "</details>" >> pr-message.md
+              echo "" >> pr-message.md
+            fi
+            
+            echo "<br>" >> pr-message.md
+            echo "" >> pr-message.md # This line prevents the formatting from breaking on the next loop
+          done
+
+      - name: Create or Update PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pcb-reports
+          path: pr-message.md
