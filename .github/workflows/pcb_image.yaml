@@ -146,6 +146,7 @@ jobs:
           CACHE_BUSTER="?raw=true&v=${{ github.run_id }}"
           
           echo "## PCB Validation Reports & Renders" > pr-message.md
+          echo "" >> pr-message.md
           
           for proj_dir in outputs/*/; do
             [ -d "$proj_dir" ] || continue
@@ -155,6 +156,7 @@ jobs:
             
             echo "### Folder: $folder" >> pr-message.md
             echo "### Renders" >> pr-message.md
+            echo "" >> pr-message.md
             
             echo "![Top Layer]($BASE_URL/$folder/top.png$CACHE_BUSTER)" >> pr-message.md
             echo "![Bottom Layer]($BASE_URL/$folder/bottom.png$CACHE_BUSTER)" >> pr-message.md
@@ -176,6 +178,7 @@ jobs:
             cat "outputs/$folder/drc.rpt" >> pr-message.md
             echo '```' >> pr-message.md
             echo "</details>" >> pr-message.md
+            echo "" >> pr-message.md
             
             if [ -f "outputs/$folder/erc.rpt" ]; then
               echo "<details><summary><b>Click to expand $folder ERC Report</b></summary>" >> pr-message.md
@@ -184,9 +187,11 @@ jobs:
               cat "outputs/$folder/erc.rpt" >> pr-message.md
               echo '```' >> pr-message.md
               echo "</details>" >> pr-message.md
+              echo "" >> pr-message.md
             fi
             
             echo "<br>" >> pr-message.md
+            echo "" >> pr-message.md # This line prevents the formatting from breaking on the next loop
           done
 
       - name: Create or Update PR Comment
