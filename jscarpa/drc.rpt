@@ -1,22 +1,10 @@
 ** Drc report for onboad.kicad_pcb **
-** Created on 2026-09-12T18:32:03 **
+** Created on 2026-09-13T00:17:00 **
 ** Report includes: Errors **
 
-** Found 1 DRC violations **
-[starved_thermal]: Thermal relief connection to zone incomplete (layer F.Cu; 1 spokes connected to isolated island)
-    Local override; error
-    @(139.1547 mm, 63.3000 mm): Zone [GND] on F.Cu, priority 0
-    @(102.8207 mm, 95.7132 mm): PTH pad 4 [GND] of U2
+** Found 0 DRC violations **
 
-** Found 2 unconnected pads **
-[unconnected_items]: Missing connection between items
-    Local override; error
-    @(116.5995 mm, 91.1428 mm): Pad 5 [GND] of U1 on F.Cu
-    @(139.1547 mm, 63.3000 mm): Zone [GND] on F.Cu, priority 0
-[unconnected_items]: Missing connection between items
-    Local override; error
-    @(90.9757 mm, 85.2129 mm): PTH pad 1 [Net-(D1-A)] of R3
-    @(108.2277 mm, 81.5904 mm): PTH pad 2 [Net-(D1-A)] of D1
+** Found 0 unconnected pads **
 
 ** Found 0 Footprint errors **
 
