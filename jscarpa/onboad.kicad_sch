@@ -3528,106 +3528,6 @@
 		)
 	)
 	(symbol
-		(lib_id "New_Library:mcp6546-e_p")
-		(at 140.97 105.41 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "af79dfe0-fce7-455e-98af-0979ac6d5eb5")
-		(property "Reference" "U2"
-			(at 168.91 95.25 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.524 1.524)
-				)
-			)
-		)
-		(property "Value" "mcp6546-e/p"
-			(at 168.91 97.79 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.524 1.524)
-				)
-			)
-		)
-		(property "Footprint" "Package_DIP:DIP-8_W7.62mm"
-			(at 140.97 105.41 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-			)
-		)
-		(property "Datasheet" "mcp6546-e/p"
-			(at 140.97 105.41 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 140.97 105.41 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "8"
-			(uuid "9c6d53ea-ac78-44a7-aeaa-185a4cbda081")
-		)
-		(pin "6"
-			(uuid "d34683b2-fb64-4089-8359-20d6b0bf48cc")
-		)
-		(pin "5"
-			(uuid "95ce438c-5c30-48dc-baf6-538cf43a5dec")
-		)
-		(pin "4"
-			(uuid "f50c1c55-0a44-44cf-9af0-19f785a9d96b")
-		)
-		(pin "3"
-			(uuid "d4d9dc47-b602-4ab6-aa3a-f75d52e7474b")
-		)
-		(pin "2"
-			(uuid "5bb3153e-3bb6-4989-b5f6-bb0ee4031c41")
-		)
-		(pin "1"
-			(uuid "464350d3-a74e-4e81-a8c0-523ea275e95c")
-		)
-		(pin "7"
-			(uuid "247efa7a-bfb4-4dce-aba0-76f45b58fd6a")
-		)
-		(instances
-			(project "onboad"
-				(path "/af28a695-d823-40d5-8f0e-8f0c8412ac94"
-					(reference "U2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 137.16 116.84 0)
 		(unit 1)
@@ -4031,6 +3931,106 @@
 			(project "onboad"
 				(path "/af28a695-d823-40d5-8f0e-8f0c8412ac94"
 					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "New_Library:mcp6546-e_p")
+		(at 140.97 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f4e10c7c-94a4-4294-8d2c-07ca2666e23e")
+		(property "Reference" "U2"
+			(at 168.91 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "mcp6546-e/p"
+			(at 168.91 97.79 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "kicad_models:PDIP8_300MC_MCH"
+			(at 140.97 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+			)
+		)
+		(property "Datasheet" "mcp6546-e/p"
+			(at 140.97 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 140.97 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "6"
+			(uuid "19aa3517-93dd-4e03-a51c-cf6a1c8881cb")
+		)
+		(pin "4"
+			(uuid "19d8c312-6568-4980-94a7-0986942f0844")
+		)
+		(pin "8"
+			(uuid "51452918-eace-4311-83f9-c4025cb56b61")
+		)
+		(pin "3"
+			(uuid "3c700a27-ba15-4e81-8bdd-5be912744339")
+		)
+		(pin "5"
+			(uuid "eb75de89-6419-4ced-b02e-6f9ecc1edbae")
+		)
+		(pin "7"
+			(uuid "33f50eb7-6d30-4ef3-bdbe-4515470b674e")
+		)
+		(pin "2"
+			(uuid "7081fd33-565e-4ccd-98b4-09c1c51d5caf")
+		)
+		(pin "1"
+			(uuid "29f31f01-6505-421b-99e6-ea43491f8412")
+		)
+		(instances
+			(project "onboad"
+				(path "/af28a695-d823-40d5-8f0e-8f0c8412ac94"
+					(reference "U2")
 					(unit 1)
 				)
 			)
