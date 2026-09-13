@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "Luna_OnboardingProject_Library") (type "KiCad") (uri "${KIPRJMOD}/Luna_OnboardingProject_Library.pretty") (options "") (descr ""))
+)
